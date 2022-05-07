@@ -124,11 +124,12 @@ def materials(lowpoly, resolution):
     return (nodes, normal_texture, diffuse_texture)
 
 
-def uv_unwrap():
-    bpy.ops.object.editmode_toggle()
-    bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.uv.smart_project(island_margin=0.05)
-    bpy.ops.object.editmode_toggle()
+def uv_unwrap(method):
+    if method == "0":
+        bpy.ops.object.editmode_toggle()
+        bpy.ops.mesh.select_all(action="SELECT")
+        bpy.ops.uv.smart_project(island_margin=0.05)
+        bpy.ops.object.editmode_toggle()
 
 
 def bake(highpoly, lowpoly, material_data, context):
@@ -205,6 +206,7 @@ class AUTOLOW_OT_start(bpy.types.Operator):
         resolution = props.resolution
         autolow_queue = scn.queue
         remesher = props.remesher
+        method = props.unwrap_method
         objects = []
 
         if len(autolow_queue) > 0:
@@ -231,7 +233,7 @@ class AUTOLOW_OT_start(bpy.types.Operator):
             modifiers(highpoly, lowpoly)
             shading(highpoly, lowpoly)
             material_data = materials(lowpoly, resolution)
-            uv_unwrap()
+            uv_unwrap(method)
             bake(highpoly, lowpoly, material_data, context)
 
         # remove all items from queue

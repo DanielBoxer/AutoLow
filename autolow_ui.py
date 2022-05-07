@@ -49,6 +49,23 @@ class AUTOLOW_PT_remesh(bpy.types.Panel):
             row.prop(props, "samples", slider=True)
 
 
+class AUTOLOW_PT_uv_unwrap(bpy.types.Panel):
+    bl_label = "UV Unwrap"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "AutoLow"
+    bl_parent_id = "AUTOLOW_PT_main"
+    bl_options = {"DEFAULT_CLOSED"}
+
+    def draw(self, context):
+        layout = self.layout
+        props = context.scene.autolow_props
+
+        row = layout.row()
+        row.label(text="Method")
+        row.prop(props, "unwrap_method")
+
+
 class AUTOLOW_PT_queue(bpy.types.Panel):
     bl_label = "Queue"
     bl_space_type = "VIEW_3D"

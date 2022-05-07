@@ -14,6 +14,7 @@ from .autolow_ui import (
     AUTOLOW_UL_queue_items,
     AUTOLOW_PT_queue,
     AUTOLOW_PT_remesh,
+    AUTOLOW_PT_uv_unwrap,
 )
 from .autolow_op import (
     AUTOLOW_OT_start,
@@ -65,6 +66,14 @@ class AUTOLOW_PG_properties(bpy.types.PropertyGroup):
             ("3", "None", ""),
         ],
     )
+    unwrap_method: bpy.props.EnumProperty(
+        name="",
+        description="UV Unwrap Method",
+        items=[
+            ("0", "Smart UV Project", ""),
+            ("1", "None", ""),
+        ],
+    )
 
 
 class AUTOLOW_PG_queue_properties(bpy.types.PropertyGroup):
@@ -79,6 +88,7 @@ classes = (
     AUTOLOW_UL_queue_items,
     AUTOLOW_OT_queue_actions,
     AUTOLOW_PT_remesh,
+    AUTOLOW_PT_uv_unwrap,
     AUTOLOW_PT_queue,
 )
 
