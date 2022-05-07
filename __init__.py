@@ -13,7 +13,7 @@ from .autolow_ui import (
     AUTOLOW_PT_main,
     AUTOLOW_UL_queue_items,
     AUTOLOW_PT_queue,
-    AUTOLOW_PT_other,
+    AUTOLOW_PT_remesh,
 )
 from .autolow_op import (
     AUTOLOW_OT_start,
@@ -22,19 +22,25 @@ from .autolow_op import (
 
 
 class AUTOLOW_PG_properties(bpy.types.PropertyGroup):
-    voxel_percent: bpy.props.IntProperty(
+    remesh_percent: bpy.props.IntProperty(
         name="%",
-        default=20,
+        default=15,
         max=100,
         min=1,
-        description="Voxel size percentage used for remeshing",
+        description=(
+            "Percentage used for remeshing. "
+            "A lower percent will result in a lower poly mesh"
+        ),
     )
     samples: bpy.props.IntProperty(
         name="",
         default=10,
         max=50,
         min=5,
-        description="More samples will give a better estimation of the voxel size",
+        description=(
+            "More samples will give a better estimation of the voxel size. "
+            "This is usually unnecessary"
+        ),
     )
     resolution: bpy.props.EnumProperty(
         name="",
@@ -47,7 +53,17 @@ class AUTOLOW_PG_properties(bpy.types.PropertyGroup):
             ("4096", "4096 px", ""),
             ("8192", "8192 px", ""),
         ],
-        default=2,
+        default=3,
+    )
+    remesher: bpy.props.EnumProperty(
+        name="",
+        description="Remesher",
+        items=[
+            ("0", "Voxel", ""),
+            ("1", "Quad", ""),
+            ("2", "Decimate", ""),
+            ("3", "None", ""),
+        ],
     )
 
 
@@ -62,8 +78,8 @@ classes = (
     AUTOLOW_PG_queue_properties,
     AUTOLOW_UL_queue_items,
     AUTOLOW_OT_queue_actions,
+    AUTOLOW_PT_remesh,
     AUTOLOW_PT_queue,
-    AUTOLOW_PT_other,
 )
 
 

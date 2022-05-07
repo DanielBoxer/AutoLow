@@ -2,10 +2,44 @@ import bpy
 import math
 
 
-def remesh(lowpoly, voxel_percent, samples):
+def remesh(lowpoly, remesh_percent, samples, remesher, self):
+    if remesher == "0":
+        # voxel remesh
+        avg_voxel_size = calc_avg_voxel_size(lowpoly, samples)
+        lowpoly.data.remesh_voxel_size = avg_voxel_size * (100 / remesh_percent)
+        bpy.ops.object.voxel_remesh()
+    elif remesher == "1":
+        # quad remesh
+        lowpoly_mesh = lowpoly.data
+        lowpoly_vertices = lowpoly_mesh.vertices
+        lowpoly_facecount = len(lowpoly_mesh.polygons)
+        lowpoly_target_faces = int(lowpoly_facecount * (remesh_percent / 100))
+        vertex_count = len(lowpoly_vertices)
+
+        bpy.ops.object.quadriflow_remesh(target_faces=lowpoly_target_faces)
+
+        # if the vertex count is the same after remeshing, the remesh probably failed
+        # it's likely that the reason is that the mesh isn't manifold
+        if len(lowpoly_vertices) == vertex_count:
+            self.report(
+                {"WARNING"}, "Mesh is non manifold and will be voxel remeshed first"
+            )
+            # voxel remesh to make mesh manifold
+            lowpoly.data.remesh_voxel_size = calc_avg_voxel_size(lowpoly, samples)
+            bpy.ops.object.voxel_remesh()
+            bpy.ops.object.quadriflow_remesh(target_faces=lowpoly_target_faces)
+    elif remesher == "2":
+        # decimate
+        decimate = lowpoly.modifiers.new("Autolow_Decimate", "DECIMATE")
+        decimate.ratio = remesh_percent / 100
+        bpy.ops.object.modifier_apply(modifier=decimate.name)
+
+
+def calc_avg_voxel_size(lowpoly, samples):
     lowpoly_mesh = lowpoly.data
-    lowpoly_edges = lowpoly_mesh.edges
     lowpoly_vertices = lowpoly_mesh.vertices
+    lowpoly_edges = lowpoly_mesh.edges
+
     edge_count = len(lowpoly_edges)
     edge_sum = 0.0
 
@@ -24,8 +58,7 @@ def remesh(lowpoly, voxel_percent, samples):
     # calculate average
     avg_voxel_size = edge_sum / accuracy_count
 
-    lowpoly.data.remesh_voxel_size = avg_voxel_size * (100 / voxel_percent)
-    bpy.ops.object.voxel_remesh()
+    return avg_voxel_size
 
 
 def modifiers(highpoly, lowpoly):
@@ -165,10 +198,13 @@ class AUTOLOW_OT_start(bpy.types.Operator):
     bl_description = "Start process"
 
     def execute(self, context):
-        samples = context.scene.autolow_props.samples
-        voxel_percent = context.scene.autolow_props.voxel_percent
-        resolution = context.scene.autolow_props.resolution
-        autolow_queue = context.scene.queue
+        scn = context.scene
+        props = scn.autolow_props
+        samples = props.samples
+        remesh_percent = props.remesh_percent
+        resolution = props.resolution
+        autolow_queue = scn.queue
+        remesher = props.remesher
         objects = []
 
         if len(autolow_queue) > 0:
@@ -191,7 +227,7 @@ class AUTOLOW_OT_start(bpy.types.Operator):
             lowpoly = copy_obj(context, highpoly)
             lowpoly.name = highpoly.name + "_lowpoly"
 
-            remesh(lowpoly, voxel_percent, samples)
+            remesh(lowpoly, remesh_percent, samples, remesher, self)
             modifiers(highpoly, lowpoly)
             shading(highpoly, lowpoly)
             material_data = materials(lowpoly, resolution)
