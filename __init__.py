@@ -15,6 +15,7 @@ from .autolow_ui import (
     AUTOLOW_PT_queue,
     AUTOLOW_PT_remesh,
     AUTOLOW_PT_uv_unwrap,
+    AUTOLOW_PT_baking,
 )
 from .autolow_op import (
     AUTOLOW_OT_start,
@@ -60,18 +61,26 @@ class AUTOLOW_PG_properties(bpy.types.PropertyGroup):
         name="",
         description="Remesher",
         items=[
-            ("0", "Voxel", ""),
-            ("1", "Quad", ""),
-            ("2", "Decimate", ""),
-            ("3", "None", ""),
+            ("VOXEL", "Voxel", "Use the voxel remesher"),
+            ("QUAD", "Quad", "Use the quad remesher"),
+            ("DECIMATE", "Decimate", "Apply a decimate modifier"),
+            ("NONE", "None", ""),
         ],
     )
     unwrap_method: bpy.props.EnumProperty(
         name="",
         description="UV Unwrap Method",
         items=[
-            ("0", "Smart UV Project", ""),
-            ("1", "None", ""),
+            ("SMART", "Smart UV Project", "Use smart UV project to unwrap mesh"),
+            ("NONE", "None", ""),
+        ],
+    )
+    bake_method: bpy.props.EnumProperty(
+        name="",
+        description="Bake Method",
+        items=[
+            ("ACTIVE", "Active", "Bake from active object"),
+            ("NONE", "None", ""),
         ],
     )
 
@@ -89,6 +98,7 @@ classes = (
     AUTOLOW_OT_queue_actions,
     AUTOLOW_PT_remesh,
     AUTOLOW_PT_uv_unwrap,
+    AUTOLOW_PT_baking,
     AUTOLOW_PT_queue,
 )
 

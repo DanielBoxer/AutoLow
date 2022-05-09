@@ -2,13 +2,13 @@ import bpy
 import math
 
 
-def remesh(lowpoly, remesh_percent, samples, remesher, self):
-    if remesher == "0":
+def remesh(self, highpoly, lowpoly, remesher, remesh_percent, samples):
+    if remesher == "VOXEL":
         # voxel remesh
         avg_voxel_size = calc_avg_voxel_size(lowpoly, samples)
         lowpoly.data.remesh_voxel_size = avg_voxel_size * (100 / remesh_percent)
         bpy.ops.object.voxel_remesh()
-    elif remesher == "1":
+    elif remesher == "QUAD":
         # quad remesh
         lowpoly_mesh = lowpoly.data
         lowpoly_vertices = lowpoly_mesh.vertices
@@ -28,11 +28,27 @@ def remesh(lowpoly, remesh_percent, samples, remesher, self):
             lowpoly.data.remesh_voxel_size = calc_avg_voxel_size(lowpoly, samples)
             bpy.ops.object.voxel_remesh()
             bpy.ops.object.quadriflow_remesh(target_faces=lowpoly_target_faces)
-    elif remesher == "2":
+    elif remesher == "DECIMATE":
         # decimate
         decimate = lowpoly.modifiers.new("Autolow_Decimate", "DECIMATE")
         decimate.ratio = remesh_percent / 100
         bpy.ops.object.modifier_apply(modifier=decimate.name)
+
+    if remesher != "NONE":
+        # add multires and shrinkwrap modifiers for better result
+        multires = lowpoly.modifiers.new("AutoLow_Multires", "MULTIRES")
+        shrinkwrap = lowpoly.modifiers.new("AutoLow_Shrinkwrap", "SHRINKWRAP")
+        shrinkwrap.wrap_method = "PROJECT"
+        shrinkwrap.target = highpoly
+        shrinkwrap.use_negative_direction = True
+
+        # subdivide multires modifier 3 times
+        for _ in range(3):
+            bpy.ops.object.multires_subdivide(
+                modifier="AutoLow_Multires", mode="CATMULL_CLARK"
+            )
+        bpy.ops.object.modifier_apply(modifier="AutoLow_Shrinkwrap")
+        multires.levels = 0
 
 
 def calc_avg_voxel_size(lowpoly, samples):
@@ -61,48 +77,18 @@ def calc_avg_voxel_size(lowpoly, samples):
     return avg_voxel_size
 
 
-def modifiers(highpoly, lowpoly):
-    multires = lowpoly.modifiers.new("AutoLow_Multires", "MULTIRES")
-    shrinkwrap = lowpoly.modifiers.new("AutoLow_Shrinkwrap", "SHRINKWRAP")
-    shrinkwrap.wrap_method = "PROJECT"
-    shrinkwrap.target = highpoly
-    shrinkwrap.use_negative_direction = True
-
-    # subdivide multires modifier 3 times
-    for _ in range(3):
-        bpy.ops.object.multires_subdivide(
-            modifier="AutoLow_Multires", mode="CATMULL_CLARK"
-        )
-    bpy.ops.object.modifier_apply(modifier="AutoLow_Shrinkwrap")
-    multires.levels = 0
+def uv_unwrap(method):
+    if method == "SMART":
+        bpy.ops.object.editmode_toggle()
+        bpy.ops.mesh.select_all(action="SELECT")
+        bpy.ops.uv.smart_project(island_margin=0.05)
+        bpy.ops.object.editmode_toggle()
 
 
-def shading(highpoly, lowpoly):
-    # shade smooth and turn off autosmooth
-    for face in lowpoly.data.polygons:
-        face.use_smooth = True
-    highpoly.data.use_auto_smooth = False
-    lowpoly.data.use_auto_smooth = False
-
-
-def materials(lowpoly, resolution):
-    material = bpy.data.materials.new(name="Autolow_Material")
-    lowpoly.active_material = material
-    material.use_nodes = True
+def bake_normals(material, resolution):
     nodes = material.node_tree.nodes
     links = material.node_tree.links
     principled = nodes.get("Principled BSDF")
-
-    # diffuse node
-    diffuse_texture = nodes.new(type="ShaderNodeTexImage")
-    diffuse_texture.location = (-500, 300)
-    links.new(diffuse_texture.outputs[0], principled.inputs[0])
-    diffuse_image = bpy.data.images.new(
-        name="diffuse",
-        width=int(resolution),
-        height=int(resolution),
-    )
-    diffuse_texture.image = diffuse_image
 
     # normal map node
     normal_texture = nodes.new(type="ShaderNodeTexImage")
@@ -121,40 +107,28 @@ def materials(lowpoly, resolution):
     normal_texture.image = normal_image
     normal_texture.image.colorspace_settings.name = "Non-Color"
 
-    return (nodes, normal_texture, diffuse_texture)
-
-
-def uv_unwrap(method):
-    if method == "0":
-        bpy.ops.object.editmode_toggle()
-        bpy.ops.mesh.select_all(action="SELECT")
-        bpy.ops.uv.smart_project(island_margin=0.05)
-        bpy.ops.object.editmode_toggle()
-
-
-def bake(highpoly, lowpoly, material_data, context):
-    nodes = material_data[0]
-    normal_texture = material_data[1]
-    diffuse_texture = material_data[2]
-    bpy.context.scene.render.engine = "CYCLES"
-
     # bake normal map
     bpy.context.scene.render.use_bake_multires = True
     bpy.context.scene.render.bake_type = "NORMALS"
     nodes.active = normal_texture
     bpy.ops.object.bake_image()
 
-    # make cage for baking
-    cage = copy_obj(context, lowpoly)
-    cage.name = "cage"
-    bpy.ops.object.editmode_toggle()
-    bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.transform.shrink_fatten(value=2)
-    bpy.ops.object.editmode_toggle()
-    bpy.context.scene.render.bake.max_ray_distance = 0
-    bpy.context.scene.render.bake.cage_extrusion = 0
-    bpy.context.scene.render.bake.cage_object = cage
-    cage.select_set(False)
+
+def bake_diffuse(highpoly, lowpoly, cage, material, resolution):
+    nodes = material.node_tree.nodes
+    links = material.node_tree.links
+    principled = nodes.get("Principled BSDF")
+
+    # diffuse node
+    diffuse_texture = nodes.new(type="ShaderNodeTexImage")
+    diffuse_texture.location = (-500, 300)
+    links.new(diffuse_texture.outputs[0], principled.inputs[0])
+    diffuse_image = bpy.data.images.new(
+        name="diffuse",
+        width=int(resolution),
+        height=int(resolution),
+    )
+    diffuse_texture.image = diffuse_image
 
     # bake diffuse map
     bpy.context.scene.render.use_bake_multires = False
@@ -163,13 +137,39 @@ def bake(highpoly, lowpoly, material_data, context):
     bpy.context.scene.render.bake.use_pass_indirect = False
     bpy.context.scene.render.bake.use_selected_to_active = True
     bpy.context.scene.render.bake.use_cage = True
+    bpy.context.scene.render.bake.max_ray_distance = 0
+    bpy.context.scene.render.bake.cage_extrusion = 0
+    bpy.context.scene.render.bake.cage_object = cage
     highpoly.select_set(True)
     set_active(lowpoly)
     bpy.ops.object.bake(type="DIFFUSE")
 
-    highpoly.hide_set(True)
-    bpy.data.objects.remove(cage, do_unlink=True)
-    lowpoly.modifiers.clear()
+
+def make_cage(context, lowpoly):
+    # make cage for baking
+    cage = copy_obj(context, lowpoly)
+    cage.name = "cage"
+    bpy.ops.object.editmode_toggle()
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.transform.shrink_fatten(value=2)
+    bpy.ops.object.editmode_toggle()
+    cage.select_set(False)
+    return cage
+
+
+def bake(context, highpoly, lowpoly, method, resolution):
+    if method == "ACTIVE":
+        # make new material
+        material = bpy.data.materials.new(name="Autolow_Material")
+        lowpoly.active_material = material
+        material.use_nodes = True
+
+        bpy.context.scene.render.engine = "CYCLES"
+        bake_normals(material, resolution)
+        cage = make_cage(context, lowpoly)
+        bake_diffuse(highpoly, lowpoly, cage, material, resolution)
+
+        bpy.data.objects.remove(cage, do_unlink=True)
 
 
 def deselect_all():
@@ -206,7 +206,8 @@ class AUTOLOW_OT_start(bpy.types.Operator):
         resolution = props.resolution
         autolow_queue = scn.queue
         remesher = props.remesher
-        method = props.unwrap_method
+        uv_method = props.unwrap_method
+        bake_method = props.bake_method
         objects = []
 
         if len(autolow_queue) > 0:
@@ -218,23 +219,28 @@ class AUTOLOW_OT_start(bpy.types.Operator):
             active_object = bpy.context.active_object
             if not active_object:
                 self.report({"ERROR"}, "No object selected")
-                return {"FINISHED"}
+                return {"CANCELLED"}
             if active_object.type != "MESH":
                 self.report({"ERROR"}, "Object must be a mesh")
-                return {"FINISHED"}
+                return {"CANCELLED"}
             objects.append(active_object)
 
         for highpoly in objects:
             highpoly.hide_set(False)
             lowpoly = copy_obj(context, highpoly)
-            lowpoly.name = highpoly.name + "_lowpoly"
+            lowpoly.name = highpoly.name + "_LP"
 
-            remesh(lowpoly, remesh_percent, samples, remesher, self)
-            modifiers(highpoly, lowpoly)
-            shading(highpoly, lowpoly)
-            material_data = materials(lowpoly, resolution)
-            uv_unwrap(method)
-            bake(highpoly, lowpoly, material_data, context)
+            # shade smooth and turn off autosmooth
+            bpy.ops.object.shade_smooth()
+            highpoly.data.use_auto_smooth = False
+            lowpoly.data.use_auto_smooth = False
+
+            remesh(self, highpoly, lowpoly, remesher, remesh_percent, samples)
+            uv_unwrap(uv_method)
+            bake(context, highpoly, lowpoly, bake_method, resolution)
+
+            highpoly.hide_set(True)
+            lowpoly.modifiers.clear()
 
         # remove all items from queue
         context.scene.queue.clear()
