@@ -16,6 +16,7 @@ from .autolow_ui import (
     AUTOLOW_PT_remesh,
     AUTOLOW_PT_uv_unwrap,
     AUTOLOW_PT_baking,
+    AUTOLOW_PT_maps,
 )
 from .autolow_op import (
     AUTOLOW_OT_start,
@@ -24,6 +25,17 @@ from .autolow_op import (
 
 
 class AUTOLOW_PG_properties(bpy.types.PropertyGroup):
+    # remesh properties
+    remesher: bpy.props.EnumProperty(
+        name="",
+        description="Remesher",
+        items=[
+            ("VOXEL", "Voxel", "Use the voxel remesher"),
+            ("QUAD", "Quad", "Use the quad remesher"),
+            ("DECIMATE", "Decimate", "Apply a decimate modifier"),
+            ("NONE", "None", ""),
+        ],
+    )
     remesh_percent: bpy.props.IntProperty(
         name="%",
         default=15,
@@ -44,6 +56,24 @@ class AUTOLOW_PG_properties(bpy.types.PropertyGroup):
             "This is usually unnecessary"
         ),
     )
+    # UV properties
+    unwrap_method: bpy.props.EnumProperty(
+        name="",
+        description="UV Unwrap Method",
+        items=[
+            ("SMART", "Smart UV Project", "Use smart UV project to unwrap mesh"),
+            ("NONE", "None", ""),
+        ],
+    )
+    # baking properties
+    bake_method: bpy.props.EnumProperty(
+        name="",
+        description="Bake Method",
+        items=[
+            ("ACTIVE", "Active", "Bake from active object"),
+            ("NONE", "None", ""),
+        ],
+    )
     resolution: bpy.props.EnumProperty(
         name="",
         description="Image resolution",
@@ -57,31 +87,11 @@ class AUTOLOW_PG_properties(bpy.types.PropertyGroup):
         ],
         default=3,
     )
-    remesher: bpy.props.EnumProperty(
-        name="",
-        description="Remesher",
-        items=[
-            ("VOXEL", "Voxel", "Use the voxel remesher"),
-            ("QUAD", "Quad", "Use the quad remesher"),
-            ("DECIMATE", "Decimate", "Apply a decimate modifier"),
-            ("NONE", "None", ""),
-        ],
+    is_normal_bake_on: bpy.props.BoolProperty(
+        name="Normals", description="Bake normal map", default=True
     )
-    unwrap_method: bpy.props.EnumProperty(
-        name="",
-        description="UV Unwrap Method",
-        items=[
-            ("SMART", "Smart UV Project", "Use smart UV project to unwrap mesh"),
-            ("NONE", "None", ""),
-        ],
-    )
-    bake_method: bpy.props.EnumProperty(
-        name="",
-        description="Bake Method",
-        items=[
-            ("ACTIVE", "Active", "Bake from active object"),
-            ("NONE", "None", ""),
-        ],
+    is_diffuse_bake_on: bpy.props.BoolProperty(
+        name="Diffuse", description="Bake diffuse map", default=True
     )
 
 
@@ -99,6 +109,7 @@ classes = (
     AUTOLOW_PT_remesh,
     AUTOLOW_PT_uv_unwrap,
     AUTOLOW_PT_baking,
+    AUTOLOW_PT_maps,
     AUTOLOW_PT_queue,
 )
 

@@ -157,7 +157,15 @@ def make_cage(context, lowpoly):
     return cage
 
 
-def bake(context, highpoly, lowpoly, method, resolution):
+def bake(
+    context,
+    highpoly,
+    lowpoly,
+    method,
+    resolution,
+    is_normal_bake_on,
+    is_diffuse_bake_on,
+):
     if method == "ACTIVE":
         # make new material
         material = bpy.data.materials.new(name="Autolow_Material")
@@ -165,9 +173,11 @@ def bake(context, highpoly, lowpoly, method, resolution):
         material.use_nodes = True
 
         bpy.context.scene.render.engine = "CYCLES"
-        bake_normals(material, resolution)
+        if is_normal_bake_on:
+            bake_normals(material, resolution)
         cage = make_cage(context, lowpoly)
-        bake_diffuse(highpoly, lowpoly, cage, material, resolution)
+        if is_diffuse_bake_on:
+            bake_diffuse(highpoly, lowpoly, cage, material, resolution)
 
         bpy.data.objects.remove(cage, do_unlink=True)
 
@@ -201,13 +211,19 @@ class AUTOLOW_OT_start(bpy.types.Operator):
     def execute(self, context):
         scn = context.scene
         props = scn.autolow_props
-        samples = props.samples
-        remesh_percent = props.remesh_percent
-        resolution = props.resolution
-        autolow_queue = scn.queue
+        # remesh props
         remesher = props.remesher
+        remesh_percent = props.remesh_percent
+        samples = props.samples
+        # UV props
         uv_method = props.unwrap_method
+        # baking props
         bake_method = props.bake_method
+        resolution = props.resolution
+        is_normal_bake_on = props.is_normal_bake_on
+        is_diffuse_bake_on = props.is_diffuse_bake_on
+
+        autolow_queue = scn.queue
         objects = []
 
         if len(autolow_queue) > 0:
@@ -237,7 +253,15 @@ class AUTOLOW_OT_start(bpy.types.Operator):
 
             remesh(self, highpoly, lowpoly, remesher, remesh_percent, samples)
             uv_unwrap(uv_method)
-            bake(context, highpoly, lowpoly, bake_method, resolution)
+            bake(
+                context,
+                highpoly,
+                lowpoly,
+                bake_method,
+                resolution,
+                is_normal_bake_on,
+                is_diffuse_bake_on,
+            )
 
             highpoly.hide_set(True)
             lowpoly.modifiers.clear()

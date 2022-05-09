@@ -80,6 +80,22 @@ class AUTOLOW_PT_baking(bpy.types.Panel):
             row.prop(props, "resolution")
 
 
+class AUTOLOW_PT_maps(bpy.types.Panel):
+    bl_label = "Maps"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "AutoLow"
+    bl_parent_id = "AUTOLOW_PT_baking"
+
+    def draw(self, context):
+        layout = self.layout
+        props = context.scene.autolow_props
+
+        col = layout.column(align=True)
+        col.prop(props, "is_normal_bake_on")
+        col.prop(props, "is_diffuse_bake_on")
+
+
 class AUTOLOW_PT_queue(bpy.types.Panel):
     bl_label = "Queue"
     bl_space_type = "VIEW_3D"
