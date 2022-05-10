@@ -74,6 +74,29 @@ class AUTOLOW_PG_properties(bpy.types.PropertyGroup):
             ("NONE", "None", ""),
         ],
     )
+    cage_settings: bpy.props.EnumProperty(
+        name="",
+        description="Cage Settings",
+        items=[
+            (
+                "AUTO",
+                "Auto Cage",
+                "Automatically generate a cage for baking. "
+                "The cage is sometimes inaccurate.",
+            ),
+            ("MANUAL", "Manual", "Manually input extrusion and ray distance."),
+        ],
+    )
+    extrusion: bpy.props.FloatProperty(
+        name="",
+        description="Inflate the active object by the specified distance for baking",
+        max=1,
+        min=0,
+        unit="LENGTH",
+    )
+    ray_distance: bpy.props.FloatProperty(
+        name="", description="The maximum ray distance", max=1, min=0, unit="LENGTH"
+    )
     resolution: bpy.props.EnumProperty(
         name="",
         description="Image resolution",

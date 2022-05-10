@@ -69,6 +69,7 @@ class AUTOLOW_PT_baking(bpy.types.Panel):
         layout = self.layout
         props = context.scene.autolow_props
         bake_method = props.bake_method
+        cage_settings = props.cage_settings
 
         row = layout.row()
         row.label(text="Method")
@@ -76,8 +77,16 @@ class AUTOLOW_PT_baking(bpy.types.Panel):
 
         if bake_method != "NONE":
             row = layout.row()
-            row.label(text="Resolution")
-            row.prop(props, "resolution")
+            row.prop(props, "cage_settings", text=" ", expand=True)
+
+            if cage_settings == "MANUAL":
+                row = layout.row()
+                row.label(text="Extrusion")
+                row.prop(props, "extrusion")
+
+                row = layout.row()
+                row.label(text="Ray Distance")
+                row.prop(props, "ray_distance")
 
 
 class AUTOLOW_PT_maps(bpy.types.Panel):
@@ -90,10 +99,18 @@ class AUTOLOW_PT_maps(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         props = context.scene.autolow_props
+        bake_method = props.bake_method
+
+        row = layout.row()
+        row.label(text="Resolution")
+        row.prop(props, "resolution")
 
         col = layout.column(align=True)
         col.prop(props, "is_normal_bake_on")
         col.prop(props, "is_diffuse_bake_on")
+        if bake_method == "NONE":
+            row.active = False
+            col.active = False
 
 
 class AUTOLOW_PT_queue(bpy.types.Panel):

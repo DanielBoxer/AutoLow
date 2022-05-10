@@ -114,7 +114,7 @@ def bake_normals(material, resolution):
     bpy.ops.object.bake_image()
 
 
-def bake_diffuse(highpoly, lowpoly, cage, material, resolution):
+def bake_diffuse(highpoly, lowpoly, cage, extrusion, ray_dist, material, resolution):
     nodes = material.node_tree.nodes
     links = material.node_tree.links
     principled = nodes.get("Principled BSDF")
@@ -136,10 +136,17 @@ def bake_diffuse(highpoly, lowpoly, cage, material, resolution):
     bpy.context.scene.render.bake.use_pass_direct = False
     bpy.context.scene.render.bake.use_pass_indirect = False
     bpy.context.scene.render.bake.use_selected_to_active = True
-    bpy.context.scene.render.bake.use_cage = True
-    bpy.context.scene.render.bake.max_ray_distance = 0
-    bpy.context.scene.render.bake.cage_extrusion = 0
-    bpy.context.scene.render.bake.cage_object = cage
+
+    if cage != None:
+        bpy.context.scene.render.bake.use_cage = True
+        bpy.context.scene.render.bake.cage_object = cage
+        bpy.context.scene.render.bake.cage_extrusion = 0
+        bpy.context.scene.render.bake.max_ray_distance = 0
+    else:
+        bpy.context.scene.render.bake.use_cage = False
+        bpy.context.scene.render.bake.cage_extrusion = extrusion
+        bpy.context.scene.render.bake.max_ray_distance = ray_dist
+
     highpoly.select_set(True)
     set_active(lowpoly)
     bpy.ops.object.bake(type="DIFFUSE")
@@ -162,6 +169,9 @@ def bake(
     highpoly,
     lowpoly,
     method,
+    cage_settings,
+    extrusion,
+    ray_dist,
     resolution,
     is_normal_bake_on,
     is_diffuse_bake_on,
@@ -175,11 +185,16 @@ def bake(
         bpy.context.scene.render.engine = "CYCLES"
         if is_normal_bake_on:
             bake_normals(material, resolution)
-        cage = make_cage(context, lowpoly)
+        if cage_settings == "AUTO":
+            cage = make_cage(context, lowpoly)
+        else:
+            cage = None
         if is_diffuse_bake_on:
-            bake_diffuse(highpoly, lowpoly, cage, material, resolution)
-
-        bpy.data.objects.remove(cage, do_unlink=True)
+            bake_diffuse(
+                highpoly, lowpoly, cage, extrusion, ray_dist, material, resolution
+            )
+        if cage_settings == "AUTO":
+            bpy.data.objects.remove(cage, do_unlink=True)
 
 
 def deselect_all():
@@ -219,6 +234,9 @@ class AUTOLOW_OT_start(bpy.types.Operator):
         uv_method = props.unwrap_method
         # baking props
         bake_method = props.bake_method
+        cage_settings = props.cage_settings
+        extrusion = props.extrusion
+        ray_dist = props.ray_distance
         resolution = props.resolution
         is_normal_bake_on = props.is_normal_bake_on
         is_diffuse_bake_on = props.is_diffuse_bake_on
@@ -258,6 +276,9 @@ class AUTOLOW_OT_start(bpy.types.Operator):
                 highpoly,
                 lowpoly,
                 bake_method,
+                cage_settings,
+                extrusion,
+                ray_dist,
                 resolution,
                 is_normal_bake_on,
                 is_diffuse_bake_on,
