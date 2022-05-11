@@ -70,7 +70,12 @@ class AUTOLOW_PG_properties(bpy.types.PropertyGroup):
         name="",
         description="Bake Method",
         items=[
-            ("ACTIVE", "Active", "Bake from active object"),
+            (
+                "TRANSFER",
+                "Transfer",
+                "Bake textures from one object to another",
+            ),
+            ("ACTIVE", "Active", "Bake textures of active object"),
             ("NONE", "None", ""),
         ],
     )
