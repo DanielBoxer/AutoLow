@@ -17,15 +17,20 @@ from .autolow_ui import (
     AUTOLOW_PT_uv_unwrap,
     AUTOLOW_PT_baking,
     AUTOLOW_PT_maps,
+    AUTOLOW_PT_settings,
+    AUTOLOW_PT_save_image,
 )
 from .autolow_op import (
     AUTOLOW_OT_start,
     AUTOLOW_OT_queue_actions,
+    AUTOLOW_OT_OpenFilebrowser,
 )
 
 
 class AUTOLOW_PG_properties(bpy.types.PropertyGroup):
+
     # remesh properties
+
     remesher: bpy.props.EnumProperty(
         name="",
         description="Remesher",
@@ -56,7 +61,9 @@ class AUTOLOW_PG_properties(bpy.types.PropertyGroup):
             "This is usually unnecessary"
         ),
     )
+
     # UV properties
+
     unwrap_method: bpy.props.EnumProperty(
         name="",
         description="UV Unwrap Method",
@@ -65,7 +72,9 @@ class AUTOLOW_PG_properties(bpy.types.PropertyGroup):
             ("NONE", "None", ""),
         ],
     )
+
     # baking properties
+
     bake_method: bpy.props.EnumProperty(
         name="",
         description="Bake Method",
@@ -115,11 +124,25 @@ class AUTOLOW_PG_properties(bpy.types.PropertyGroup):
         ],
         default=3,
     )
+
+    # maps properties
+
     is_normal_bake_on: bpy.props.BoolProperty(
         name="Normals", description="Bake normal map", default=True
     )
     is_diffuse_bake_on: bpy.props.BoolProperty(
         name="Diffuse", description="Bake diffuse map", default=True
+    )
+
+    # settings properties
+
+    is_image_saved: bpy.props.BoolProperty(
+        name="", description="Save images after baking", default=True
+    )
+    image_path: bpy.props.StringProperty(
+        name="Path",
+        description="Images will be saved at this path.",
+        default=".\\Autolow\\",
     )
 
 
@@ -129,16 +152,19 @@ class AUTOLOW_PG_queue_properties(bpy.types.PropertyGroup):
 
 classes = (
     AUTOLOW_OT_start,
+    AUTOLOW_OT_queue_actions,
+    AUTOLOW_OT_OpenFilebrowser,
     AUTOLOW_PT_main,
     AUTOLOW_PG_properties,
     AUTOLOW_PG_queue_properties,
     AUTOLOW_UL_queue_items,
-    AUTOLOW_OT_queue_actions,
     AUTOLOW_PT_remesh,
     AUTOLOW_PT_uv_unwrap,
     AUTOLOW_PT_baking,
     AUTOLOW_PT_maps,
     AUTOLOW_PT_queue,
+    AUTOLOW_PT_settings,
+    AUTOLOW_PT_save_image,
 )
 
 

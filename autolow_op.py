@@ -1,5 +1,8 @@
 import bpy
+from bpy.types import Operator
+from bpy_extras.io_utils import ImportHelper
 import math
+import pathlib
 
 
 # utility functions
@@ -33,14 +36,43 @@ def calc_avg_voxel_size(obj):
     return avg_voxel_size
 
 
-def new_node(nodes, location, name="ShaderNodeTexImage", non_color=False, image=None):
+def new_node(nodes, location, name="ShaderNodeTexImage", image=None):
     node = nodes.new(type=name)
     node.location = location
     if image is not None:
         node.image = image
-        if non_color:
-            node.image.colorspace_settings.name = "Non-Color"
+    node.select = False
     return node
+
+
+def new_image(name: str, non_color=False, use_float=False):
+    resolution = get_props().resolution
+    image = bpy.data.images.new(
+        name=name,
+        width=int(resolution),
+        height=int(resolution),
+        float_buffer=use_float,
+    )
+    if non_color:
+        image.colorspace_settings.name = "Non-Color"
+    return image
+
+
+def save_image(image):
+    props = get_props()
+    is_image_saved = props.is_image_saved
+
+    if is_image_saved:
+        path = props.image_path
+        if path == ".\\Autolow\\":
+            # save images in 'AutoLow' folder
+            path = pathlib.Path(bpy.path.abspath("//") + "AutoLow")
+            path.mkdir(exist_ok=True)
+            path = str(path)
+
+        image.filepath_raw = path + "\\" + image.name + ".png"
+        image.file_format = "PNG"
+        image.save()
 
 
 def make_cage(lowpoly):
@@ -53,6 +85,31 @@ def make_cage(lowpoly):
     bpy.ops.object.editmode_toggle()
     cage.select_set(False)
     return cage
+
+
+def bake(bake_type, highpoly, lowpoly):
+    props = get_props()
+    bake_method = props.bake_method
+    remesher = props.remesher
+
+    # check if multires normal baking should be done
+    is_bake_multires = remesher != "NONE" and bake_type == "NORMAL"
+
+    # select objects for baking
+    if bake_method == "TRANSFER" and not is_bake_multires:
+        highpoly.select_set(True)
+    set_active(lowpoly)
+
+    # bake
+    if is_bake_multires:
+        # multires bake (only for normals)
+        bpy.context.scene.render.use_bake_multires = True
+        bpy.context.scene.render.bake_type = "NORMALS"
+        bpy.ops.object.bake_image()
+        bpy.context.scene.render.use_bake_multires = False
+    else:
+        # regular bake
+        bpy.ops.object.bake(type=bake_type)
 
 
 def copy_obj(object):
@@ -83,7 +140,7 @@ def get_props():
 # main functions
 
 
-def remesh(highpoly, lowpoly):
+def remesh_process(highpoly, lowpoly):
     props = get_props()
     remesher = props.remesher
     remesh_percent = props.remesh_percent
@@ -135,7 +192,7 @@ def remesh(highpoly, lowpoly):
         multires.levels = 0
 
 
-def uv_unwrap():
+def uv_unwrap_process():
     method = get_props().unwrap_method
 
     if method == "SMART":
@@ -145,17 +202,16 @@ def uv_unwrap():
         bpy.ops.object.editmode_toggle()
 
 
-def bake(highpoly, lowpoly):
+def bake_process(highpoly, lowpoly):
     props = get_props()
     method = props.bake_method
-    resolution = props.resolution
     cage_settings = props.cage_settings
     extrusion = props.extrusion
     ray_dist = props.ray_distance
     is_normal_bake_on = props.is_normal_bake_on
     is_diffuse_bake_on = props.is_diffuse_bake_on
 
-    if method == "TRANSFER":
+    if method != "NONE":
         # make new material
         material = bpy.data.materials.new(name="Autolow_Material")
         lowpoly.active_material = material
@@ -163,12 +219,17 @@ def bake(highpoly, lowpoly):
         nodes = material.node_tree.nodes
         links = material.node_tree.links
         principled = nodes.get("Principled BSDF")
+        principled.select = False
+        output = nodes.get("Material Output")
+        output.select = False
 
         # bake settings
         bpy.context.scene.render.engine = "CYCLES"
         bpy.context.scene.render.bake.use_pass_direct = False
         bpy.context.scene.render.bake.use_pass_indirect = False
-        bpy.context.scene.render.bake.use_selected_to_active = True
+
+        if method == "TRANSFER":
+            bpy.context.scene.render.bake.use_selected_to_active = True
 
         # make cage
         if cage_settings == "AUTO":
@@ -185,60 +246,61 @@ def bake(highpoly, lowpoly):
         # normals
         if is_normal_bake_on:
             # setup nodes
-            normal_image = bpy.data.images.new(
-                name="normal",
-                width=int(resolution),
-                height=int(resolution),
-                alpha=False,
-                float_buffer=True,
-            )
+            normal_image = new_image("normal", non_color=True, use_float=False)
             normal_texture = new_node(nodes, (-500, -150), image=normal_image)
             normal_map = new_node(nodes, (-200, -175), "ShaderNodeNormalMap")
             links.new(normal_texture.outputs[0], normal_map.inputs[1])
             links.new(normal_map.outputs[0], principled.inputs[22])
-
-            # bake settings
-            bpy.context.scene.render.use_bake_multires = True
-            bpy.context.scene.render.bake_type = "NORMALS"
+            nodes.active = normal_texture
 
             # bake normals
-            set_active(lowpoly)
-            nodes.active = normal_texture
-            bpy.ops.object.bake_image()
-            # turn off multires
-            bpy.context.scene.render.use_bake_multires = False
+            bake("NORMAL", highpoly, lowpoly)
+            save_image(normal_image)
 
         # diffuse
         if is_diffuse_bake_on:
             # setup nodes
-            diffuse_image = bpy.data.images.new(
-                name="diffuse",
-                width=int(resolution),
-                height=int(resolution),
-            )
+            diffuse_image = new_image("diffuse")
             diffuse_texture = new_node(nodes, (-500, 300), image=diffuse_image)
             links.new(diffuse_texture.outputs[0], principled.inputs[0])
+            nodes.active = diffuse_texture
 
             # bake diffuse
-            highpoly.select_set(True)
-            set_active(lowpoly)
-            nodes.active = diffuse_texture
-            bpy.ops.object.bake(type="DIFFUSE")
+            bake("DIFFUSE", highpoly, lowpoly)
+            save_image(diffuse_image)
 
         # remove cage
         if cage_settings == "AUTO":
             bpy.data.objects.remove(cage, do_unlink=True)
 
 
-class AUTOLOW_OT_start(bpy.types.Operator):
+class AUTOLOW_OT_start(Operator):
     bl_idname = "autolow.start"
     bl_label = "Start Process"
     bl_description = "Start process"
 
     def execute(self, context):
+        props = get_props()
+        is_image_saved = props.is_image_saved
+
+        # check if image path exists
+        if is_image_saved:
+            path = props.image_path
+            default = ".\\Autolow\\"
+            if path != default:
+                if not pathlib.Path(path).is_dir():
+                    self.report(
+                        {"ERROR"},
+                        (
+                            "The set path doesn't exist."
+                            " Path has been reset to the default"
+                        ),
+                    )
+                    props.image_path = default
+                    return {"CANCELLED"}
+
         autolow_queue = context.scene.queue
         objects = []
-
         if len(autolow_queue) > 0:
             for object in autolow_queue:
                 current = bpy.data.objects[object.name]
@@ -252,6 +314,9 @@ class AUTOLOW_OT_start(bpy.types.Operator):
             if active_object.type != "MESH":
                 self.report({"ERROR"}, "Object must be a mesh")
                 return {"CANCELLED"}
+            if len(active_object.data.polygons) == 0:
+                self.report({"ERROR"}, "The mesh must have more than 0 polygons")
+                return {"CANCELLED"}
             objects.append(active_object)
 
         for highpoly in objects:
@@ -264,9 +329,14 @@ class AUTOLOW_OT_start(bpy.types.Operator):
             highpoly.data.use_auto_smooth = False
             lowpoly.data.use_auto_smooth = False
 
-            remesh(highpoly, lowpoly)
-            uv_unwrap()
-            bake(highpoly, lowpoly)
+            remesh_process(highpoly, lowpoly)
+            if (props.unwrap_method != "NONE" or props.bake_method != "NONE") and len(
+                lowpoly.data.polygons
+            ) == 0:
+                self.report({"ERROR"}, "The mesh has 0 polygons after remeshing")
+                return {"CANCELLED"}
+            uv_unwrap_process()
+            bake_process(highpoly, lowpoly)
 
             highpoly.hide_set(True)
             lowpoly.modifiers.clear()
@@ -277,7 +347,26 @@ class AUTOLOW_OT_start(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class AUTOLOW_OT_queue_actions(bpy.types.Operator):
+class AUTOLOW_OT_OpenFilebrowser(Operator, ImportHelper):
+    bl_idname = "autolow.open_filebrowser"
+    bl_label = "Set Path"
+    bl_description = (
+        "Set path of saved images."
+        " If path is not set, images will be saved in a folder called 'AutoLow'"
+    )
+
+    def execute(self, context):
+        new_path = self.filepath
+        if pathlib.Path(new_path).is_dir():
+            get_props().image_path = new_path
+        else:
+            self.report({"ERROR"}, "The path must end with a folder")
+            return {"CANCELLED"}
+
+        return {"FINISHED"}
+
+
+class AUTOLOW_OT_queue_actions(Operator):
     bl_idname = "queue.actions"
     bl_label = "Actions"
     bl_description = "Add, remove, move up, move down"

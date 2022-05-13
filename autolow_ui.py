@@ -1,7 +1,9 @@
 import bpy
+from bpy.types import Panel
+from .autolow_op import get_props
 
 
-class AUTOLOW_PT_main(bpy.types.Panel):
+class AUTOLOW_PT_main(Panel):
     bl_label = "Autolow"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
@@ -13,7 +15,7 @@ class AUTOLOW_PT_main(bpy.types.Panel):
         row.operator("autolow.start", text="Start")
 
 
-class AUTOLOW_PT_remesh(bpy.types.Panel):
+class AUTOLOW_PT_remesh(Panel):
     bl_label = "Remesh"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
@@ -22,7 +24,7 @@ class AUTOLOW_PT_remesh(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        props = context.scene.autolow_props
+        props = get_props()
 
         remesher = props.remesher
 
@@ -42,7 +44,7 @@ class AUTOLOW_PT_remesh(bpy.types.Panel):
             row.prop(props, "samples", slider=True)
 
 
-class AUTOLOW_PT_uv_unwrap(bpy.types.Panel):
+class AUTOLOW_PT_uv_unwrap(Panel):
     bl_label = "UV Unwrap"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
@@ -51,14 +53,14 @@ class AUTOLOW_PT_uv_unwrap(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        props = context.scene.autolow_props
+        props = get_props()
 
         row = layout.row()
         row.label(text="Method")
         row.prop(props, "unwrap_method")
 
 
-class AUTOLOW_PT_baking(bpy.types.Panel):
+class AUTOLOW_PT_baking(Panel):
     bl_label = "Baking"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
@@ -67,7 +69,7 @@ class AUTOLOW_PT_baking(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        props = context.scene.autolow_props
+        props = get_props()
         bake_method = props.bake_method
         cage_settings = props.cage_settings
 
@@ -89,7 +91,7 @@ class AUTOLOW_PT_baking(bpy.types.Panel):
                 row.prop(props, "ray_distance")
 
 
-class AUTOLOW_PT_maps(bpy.types.Panel):
+class AUTOLOW_PT_maps(Panel):
     bl_label = "Maps"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
@@ -98,22 +100,55 @@ class AUTOLOW_PT_maps(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        props = context.scene.autolow_props
+        props = get_props()
         bake_method = props.bake_method
 
         row = layout.row()
         row.label(text="Resolution")
         row.prop(props, "resolution")
 
-        col = layout.column(align=True)
-        col.prop(props, "is_normal_bake_on")
-        col.prop(props, "is_diffuse_bake_on")
+        row = layout.row(align=True)
+        row.prop(props, "is_normal_bake_on")
+        row.prop(props, "is_diffuse_bake_on")
         if bake_method == "NONE":
             row.active = False
-            col.active = False
+            row.active = False
 
 
-class AUTOLOW_PT_queue(bpy.types.Panel):
+class AUTOLOW_PT_settings(Panel):
+    bl_label = "Settings"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "AutoLow"
+    bl_parent_id = "AUTOLOW_PT_main"
+    bl_options = {"DEFAULT_CLOSED"}
+
+    def draw(self, context):
+        pass
+
+
+class AUTOLOW_PT_save_image(Panel):
+    bl_label = "Save Images"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_parent_id = "AUTOLOW_PT_settings"
+    bl_options = {"DEFAULT_CLOSED"}
+
+    def draw_header(self, context):
+        self.layout.prop(get_props(), "is_image_saved", text="")
+
+    def draw(self, context):
+        layout = self.layout
+        image_path = get_props().image_path
+
+        row = layout.row()
+        row.operator("autolow.open_filebrowser", icon="FILEBROWSER")
+
+        row = layout.row()
+        row.label(text="Path: " + image_path)
+
+
+class AUTOLOW_PT_queue(Panel):
     bl_label = "Queue"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
