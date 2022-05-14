@@ -139,13 +139,40 @@ class AUTOLOW_PT_save_image(Panel):
 
     def draw(self, context):
         layout = self.layout
-        image_path = get_props().image_path
+        props = get_props()
+        image_path = props.image_path
+        is_image_saved = props.is_image_saved
 
         row = layout.row()
         row.operator("autolow.open_filebrowser", icon="FILEBROWSER")
+        if not is_image_saved:
+            row.active = False
 
         row = layout.row()
         row.label(text="Path: " + image_path)
+        if not is_image_saved:
+            row.active = False
+
+
+class AUTOLOW_PT_autosave(Panel):
+    bl_label = "Autosave"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_parent_id = "AUTOLOW_PT_settings"
+    bl_options = {"DEFAULT_CLOSED"}
+
+    def draw_header(self, context):
+        self.layout.prop(get_props(), "autosave", text="")
+
+    def draw(self, context):
+        layout = self.layout
+        props = get_props()
+        autosave = props.autosave
+
+        row = layout.row()
+        row.prop(get_props(), "autosave_after")
+        if not autosave:
+            row.active = False
 
 
 class AUTOLOW_PT_queue(Panel):

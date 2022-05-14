@@ -19,6 +19,7 @@ from .autolow_ui import (
     AUTOLOW_PT_maps,
     AUTOLOW_PT_settings,
     AUTOLOW_PT_save_image,
+    AUTOLOW_PT_autosave,
 )
 from .autolow_op import (
     AUTOLOW_OT_start,
@@ -46,6 +47,7 @@ classes = (
     AUTOLOW_PT_queue,
     AUTOLOW_PT_settings,
     AUTOLOW_PT_save_image,
+    AUTOLOW_PT_autosave,
 )
 
 

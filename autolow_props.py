@@ -125,6 +125,23 @@ class AUTOLOW_PG_properties(PropertyGroup):
         description="Images will be saved at this path.",
         default=".\\Autolow\\",
     )
+    autosave: BoolProperty(
+        name="",
+        description=(
+            "Save blend file when start button is pressed."
+            " This is recommended in case something unexpected happens to prevent"
+            " losing unsaved work"
+        ),
+        default=True,
+    )
+    autosave_after: BoolProperty(
+        name="Autosave after process",
+        description=(
+            "Save blend file after finishing process."
+            " If there are items in the queue, autosave after each item finishes"
+        ),
+        default=False,
+    )
 
 
 class AUTOLOW_PG_queue_properties(PropertyGroup):

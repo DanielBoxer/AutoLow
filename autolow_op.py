@@ -75,6 +75,18 @@ def save_image(image):
         image.save()
 
 
+def save():
+    if get_props().autosave:
+        if bpy.data.filepath == "":
+            # open file browser and save as
+            bpy.ops.wm.save_mainfile("INVOKE_AREA")
+            return False
+        else:
+            # save
+            bpy.ops.wm.save_mainfile()
+    return True
+
+
 def make_cage(lowpoly):
     # make cage for baking
     cage = copy_obj(lowpoly)
@@ -281,13 +293,16 @@ class AUTOLOW_OT_start(Operator):
 
     def execute(self, context):
         props = get_props()
-        is_image_saved = props.is_image_saved
 
-        # check if image path exists
-        if is_image_saved:
+        if not save():
+            self.report({"WARNING"}, "Save file before activating autosave")
+            return {"CANCELLED"}
+
+        if props.is_image_saved:
             path = props.image_path
             default = ".\\Autolow\\"
             if path != default:
+                # check if image path exists
                 if not pathlib.Path(path).is_dir():
                     self.report(
                         {"ERROR"},
@@ -298,6 +313,16 @@ class AUTOLOW_OT_start(Operator):
                     )
                     props.image_path = default
                     return {"CANCELLED"}
+            elif bpy.data.filepath == "":
+                # check if file has been saved
+                self.report(
+                    {"ERROR"},
+                    (
+                        "Image path unknown."
+                        " Either save the blender file or set the path in settings"
+                    ),
+                )
+                return {"CANCELLED"}
 
         autolow_queue = context.scene.queue
         objects = []
@@ -340,6 +365,8 @@ class AUTOLOW_OT_start(Operator):
 
             highpoly.hide_set(True)
             lowpoly.modifiers.clear()
+            if props.autosave_after:
+                save()
 
         # remove all items from queue
         context.scene.queue.clear()
@@ -359,6 +386,7 @@ class AUTOLOW_OT_OpenFilebrowser(Operator, ImportHelper):
         new_path = self.filepath
         if pathlib.Path(new_path).is_dir():
             get_props().image_path = new_path
+            self.report({"INFO"}, "Path: " + new_path)
         else:
             self.report({"ERROR"}, "The path must end with a folder")
             return {"CANCELLED"}
