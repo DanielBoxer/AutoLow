@@ -11,20 +11,22 @@ bl_info = {
 import bpy
 from .autolow_ui import (
     AUTOLOW_PT_main,
-    AUTOLOW_UL_queue_items,
-    AUTOLOW_PT_queue,
+    AUTOLOW_PT_workflow,
     AUTOLOW_PT_remesh,
     AUTOLOW_PT_uv_unwrap,
     AUTOLOW_PT_baking,
     AUTOLOW_PT_maps,
+    AUTOLOW_PT_queue,
     AUTOLOW_PT_settings,
     AUTOLOW_PT_save_image,
     AUTOLOW_PT_autosave,
+    AUTOLOW_UL_queue_items,
 )
 from .autolow_op import (
     AUTOLOW_OT_start,
+    AUTOLOW_OT_set_workflow,
+    AUTOLOW_OT_open_filebrowser,
     AUTOLOW_OT_queue_actions,
-    AUTOLOW_OT_OpenFilebrowser,
 )
 from .autolow_props import (
     AUTOLOW_PG_properties,
@@ -33,13 +35,8 @@ from .autolow_props import (
 
 
 classes = (
-    AUTOLOW_OT_start,
-    AUTOLOW_OT_queue_actions,
-    AUTOLOW_OT_OpenFilebrowser,
     AUTOLOW_PT_main,
-    AUTOLOW_PG_properties,
-    AUTOLOW_PG_queue_properties,
-    AUTOLOW_UL_queue_items,
+    AUTOLOW_PT_workflow,
     AUTOLOW_PT_remesh,
     AUTOLOW_PT_uv_unwrap,
     AUTOLOW_PT_baking,
@@ -48,6 +45,13 @@ classes = (
     AUTOLOW_PT_settings,
     AUTOLOW_PT_save_image,
     AUTOLOW_PT_autosave,
+    AUTOLOW_UL_queue_items,
+    AUTOLOW_OT_start,
+    AUTOLOW_OT_set_workflow,
+    AUTOLOW_OT_queue_actions,
+    AUTOLOW_OT_open_filebrowser,
+    AUTOLOW_PG_properties,
+    AUTOLOW_PG_queue_properties,
 )
 
 

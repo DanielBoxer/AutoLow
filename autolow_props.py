@@ -10,6 +10,27 @@ from bpy.props import (
 
 class AUTOLOW_PG_properties(PropertyGroup):
 
+    # workflow properties
+
+    workflow: EnumProperty(
+        name="",
+        description="Workflow",
+        items=[
+            (
+                "FULL",
+                "Full Process",
+                "The full process includes remeshing, UV unwrapping and baking",
+            ),
+            (
+                "TRANSFER_BAKE",
+                "Transfer Bake",
+                "Bake textures from one object to another",
+            ),
+            ("ACTIVE_BAKE", "Active Bake", "Bake textures of the active object"),
+            ("NONE", "None", "Set all to 'None'"),
+        ],
+    )
+
     # remesh properties
 
     remesher: EnumProperty(

@@ -242,6 +242,8 @@ def bake_process(highpoly, lowpoly):
 
         if method == "TRANSFER":
             bpy.context.scene.render.bake.use_selected_to_active = True
+        else:
+            bpy.context.scene.render.bake.use_selected_to_active = False
 
         # make cage
         if cage_settings == "AUTO":
@@ -374,7 +376,45 @@ class AUTOLOW_OT_start(Operator):
         return {"FINISHED"}
 
 
-class AUTOLOW_OT_OpenFilebrowser(Operator, ImportHelper):
+class AUTOLOW_OT_set_workflow(Operator):
+    bl_idname = "autolow.set_workflow"
+    bl_label = "Set Workflow"
+    bl_description = (
+        "Change addon settings to the workflow selected. "
+        "This is not necessary when using the addon and is only a shortcut. "
+        "If you would like to customize the settings, this panel can be ignored"
+    )
+
+    def execute(self, context):
+        props = get_props()
+        workflow = props.workflow
+        remesher = props.remesher
+
+        if workflow == "FULL":
+            if remesher == "NONE":
+                props.remesher = "VOXEL"
+            props.unwrap_method = "SMART"
+            props.bake_method = "TRANSFER"
+
+        elif workflow == "TRANSFER_BAKE":
+            props.remesher = "NONE"
+            props.unwrap_method = "SMART"
+            props.bake_method = "TRANSFER"
+
+        elif workflow == "ACTIVE_BAKE":
+            props.remesher = "NONE"
+            props.unwrap_method = "SMART"
+            props.bake_method = "ACTIVE"
+
+        else:
+            props.remesher = "NONE"
+            props.unwrap_method = "NONE"
+            props.bake_method = "NONE"
+
+        return {"FINISHED"}
+
+
+class AUTOLOW_OT_open_filebrowser(Operator, ImportHelper):
     bl_idname = "autolow.open_filebrowser"
     bl_label = "Set Path"
     bl_description = (

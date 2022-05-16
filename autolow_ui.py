@@ -15,6 +15,19 @@ class AUTOLOW_PT_main(Panel):
         row.operator("autolow.start", text="Start")
 
 
+class AUTOLOW_PT_workflow(Panel):
+    bl_label = "Workflow"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "AutoLow"
+    bl_parent_id = "AUTOLOW_PT_main"
+
+    def draw(self, context):
+        row = self.layout.row()
+        row.prop(get_props(), "workflow")
+        row.operator("autolow.set_workflow")
+
+
 class AUTOLOW_PT_remesh(Panel):
     bl_label = "Remesh"
     bl_space_type = "VIEW_3D"
